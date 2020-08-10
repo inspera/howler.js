@@ -6,6 +6,7 @@
  *  goldfirestudios.com
  *
  *  MIT License
+ * @preserve
  */
 
 (function() {
@@ -51,6 +52,7 @@
       self.usingWebAudio = true;
       self.autoSuspend = true;
       self.ctx = null;
+      self.xhr = null;
 
       // Set to false to disable the auto audio unlocker.
       self.autoUnlock = true;
@@ -2353,6 +2355,7 @@
     } else {
       // Load the buffer from the URL.
       var xhr = new XMLHttpRequest();
+      Howler.xhr = xhr;
       xhr.open(self._xhr.method, url, true);
       xhr.withCredentials = self._xhr.withCredentials;
       xhr.responseType = 'arraybuffer';
@@ -2375,14 +2378,10 @@
         decodeAudioData(xhr.response, self);
       };
       xhr.onerror = function() {
-        // If there is an error, switch to HTML5 Audio.
-        if (self._webAudio) {
-          self._html5 = true;
-          self._webAudio = false;
-          self._sounds = [];
-          delete cache[url];
-          self.load();
-        }
+        self._emit('loaderror', null, 'Failed loading audio file. Request error.');
+      };
+      xhr.onabort = function() {
+        self._emit('loaderror', null, 'Failed loading audio file. Request aborted.');
       };
       safeXhrSend(xhr);
     }
@@ -2408,6 +2407,7 @@
   var decodeAudioData = function(arraybuffer, self) {
     // Fire a load error if something broke.
     var error = function() {
+      console.error('Decoding audio data failed.');
       self._emit('loaderror', null, 'Decoding audio data failed.');
     };
 
